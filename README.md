@@ -54,8 +54,10 @@ provider:
             statements:
                 - Effect: Allow
                   Action: secretsmanager:GetSecretValue
-                  Resource: arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:api/${sls:stage}
+                  Resource: arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:api/${sls:stage}-*
 ```
+
+> **Note:** The `-*` wildcard at the end of the ARN is required. Secrets Manager appends a random 6-character suffix to every secret ARN (e.g., `api/production-AbCdEf`). Without the wildcard, IAM will deny the request.
 
 **Individual import** — load specific secrets per env var:
 
@@ -85,6 +87,12 @@ provider:
         VENDOR_KEY: bref-secret:vendor/api-key
         MY_PARAMETER: bref-ssm:/my-app/my-parameter
 ```
+
+### Important: `bref/bref` compatibility
+
+The current version of `bref/bref` only triggers the secrets loader when it detects at least one `bref-ssm:` env var. If you're using Secrets Manager without any SSM parameters, the loader won't run and your env vars won't be set.
+
+Until `bref/bref` is updated, keep at least one `bref-ssm:` variable in your configuration alongside `BREF_SECRETS_MANAGER` or `bref-secret:` vars.
 
 ### When to use Secrets Manager over SSM
 
