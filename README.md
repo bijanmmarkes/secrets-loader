@@ -54,7 +54,7 @@ provider:
             statements:
                 - Effect: Allow
                   Action: secretsmanager:GetSecretValue
-                  Resource: arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:api/*
+                  Resource: arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:api/${sls:stage}
 ```
 
 **Individual import** — load specific secrets per env var:
