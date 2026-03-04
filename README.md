@@ -72,11 +72,11 @@ Multiple references to the same secret name are deduplicated into a single API c
 
 ### Combining both backends
 
-You can use both SSM and Secrets Manager together. Priority order (highest wins):
+You can use both SSM and Secrets Manager together. If the same env var name is set by multiple sources, the more explicit source wins:
 
-1. `bref-ssm:` — explicit SSM per-variable mapping
-2. `bref-secret:` — explicit Secrets Manager per-variable mapping
-3. `BREF_SECRETS_MANAGER` — bulk Secrets Manager import
+1. `bref-ssm:` overrides everything
+2. `bref-secret:` overrides the global import
+3. `BREF_SECRETS_MANAGER` global import sets the baseline
 
 ```yaml
 provider:
@@ -88,9 +88,9 @@ provider:
 
 ### When to use Secrets Manager over SSM
 
-SSM Parameter Store works well at low concurrency. Standard parameters are free below 40 TPS (shared across all `GetParameter*` APIs). But SSM's `GetParameters` batches at most 10 parameters per call, and each parameter in the batch counts as a separate API interaction for billing. If you have 50 parameters, that's 5 API calls and 50 billable interactions per cold start.
+SSM Parameter Store works well at low concurrency. Standard parameters are free below 40 TPS (shared across all `GetParameter*` APIs). But SSM's `GetParameters` batches at most 10 parameters per call. If you have 50 parameters, that's 5 API calls (5 TPS) per cold start — so only 8 simultaneous cold starts will hit the 40 TPS default limit. Beyond that, requests get throttled unless you enable higher throughput.
 
-Once you exceed the 40 TPS default limit, you must enable higher throughput or your requests get throttled. With higher throughput enabled, SSM charges $0.05 per 10,000 interactions — and those add up fast because of the per-parameter counting.
+With higher throughput enabled, SSM charges $0.05 per 10,000 API interactions. Note that AWS counts each individual parameter returned as a separate interaction, not each API call. So those 5 batch calls returning 50 parameters count as 50 billable interactions per cold start.
 
 Secrets Manager takes a different approach: you store all your variables in one JSON secret and fetch them in 1 API call per cold start. It costs $0.40/secret/month plus $0.05 per 10,000 API calls, and handles up to 10,000 TPS.
 
